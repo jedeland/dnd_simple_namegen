@@ -45,8 +45,13 @@ def get_regions():
     return regions
 def get_npc(cur, num_npcs, nations):
     print("Taking random value from data, returning {0} NPC names from {1} culture group".format(num_npcs, nations))
-    cur.execute("""SELECT * FROM NAMES""")
-    output = cur.fetchall()
+    cur.execute("""SELECT name, tag FROM NAMES WHERE origin == ? AND tag != ? and tag == 'F' LIMIT ? """, (str(nations),str('N'), num_npcs/2))
+    output_list_female = cur.fetchall()
+    cur.execute("""SELECT name, tag FROM NAMES WHERE origin == ? AND tag != ? and tag == 'M' LIMIT ? """,
+                (str(nations), str('N'), num_npcs / 2))
+    output_list_male = cur.fetchall()
+    output = output_list_male + output_list_female
+    print(len(output))
     return output
 
 
@@ -75,12 +80,14 @@ def do_enum(args):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    yes_list, no_list, quit_list = ["y", "yeh", "yes", "yep", "ye"], ["n", "no", "nah", "nope"], ["q", "quit", "exit"]
+    yes_list, no_list, quit_list = ["y", "yeh", "yes", "yep", "ye", ""], ["n", "no", "nah", "nope"], ["q", "quit", "exit"]
 
     region_selections = get_regions()
 
     print_objective()
     conn = sqlite3.connect('names_merged_.db')
+
+    # conn.row_factory = sqlite3.Row
     try:
         console_running = True
         cur = conn.cursor()
@@ -110,8 +117,9 @@ if __name__ == '__main__':
             origins_list = list(region_selections.keys())
             if single_culture is True or int(number_npcs) == 1:
                 selected_nation = select_group(origins_list, region_selections)
-                npc_group = get_npc(cur, cur, selected_nation)
+                npc_group = get_npc(cur, number_npcs, selected_nation)
                 print(npc_group)
+                break
 
     except Exception as e:
         print("Error occured {}".format(e))
