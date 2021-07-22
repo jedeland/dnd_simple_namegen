@@ -43,12 +43,15 @@ def get_regions():
     fantasy = sorted(["Tiefling", "Half-Orc", "Halfling", "Gnome", "Elf", "Dwarf", "Dragonborn"])
     regions = {"African": africa, "Europe": europe, "Near East": arabia, "Asia": asia, "Experimental: Fantasy": fantasy}
     return regions
+
 def get_npc(cur, num_npcs, nations):
     print("Taking random value from data, returning {0} NPC names from {1} culture group".format(num_npcs, nations))
-    cur.execute("""SELECT name, tag FROM NAMES WHERE origin == ? AND tag != ? and tag == 'F' LIMIT ? """, (str(nations),str('N'), num_npcs/2))
+    cur.execute("""SELECT name, tag FROM NAMES WHERE origin == ? AND tag != 'N' and (tag == 'F' or tag == 'NN') LIMIT ? """, (str(nations), num_npcs/2))
     output_list_female = cur.fetchall()
-    cur.execute("""SELECT name, tag FROM NAMES WHERE origin == ? AND tag != ? and tag == 'M' LIMIT ? """,
-                (str(nations), str('N'), num_npcs / 2))
+    cur.execute("""SELECT name, tag FROM NAMES WHERE origin == ? AND tag != 'N' and (tag == 'M' or tag == 'NN') LIMIT ? """,
+                (str(nations), num_npcs / 2))
+    cur.execute("""SELECT name, tag FROM NAMES WHERE origin == ? AND tag == 'N' LIMIT ?""",
+                (str(nations), num_npcs))
     output_list_male = cur.fetchall()
     output = output_list_male + output_list_female
     print(len(output))
@@ -77,6 +80,13 @@ def do_enum(args):
     for number, origin in enumerate(args, start=1): #cleaner that using enumerate constantly
         print(number, " ", origin)
 
+def dict_factory(cursor, row):
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
+
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -86,6 +96,8 @@ if __name__ == '__main__':
 
     print_objective()
     conn = sqlite3.connect('names_merged_.db')
+    conn.row_factory = dict_factory
+    print("Ok connection received")
 
     # conn.row_factory = sqlite3.Row
     try:
@@ -116,6 +128,7 @@ if __name__ == '__main__':
                     print("There was an error, please ensure the input corresponds to yes or no")
             origins_list = list(region_selections.keys())
             if single_culture is True or int(number_npcs) == 1:
+                print("Point 1")
                 selected_nation = select_group(origins_list, region_selections)
                 npc_group = get_npc(cur, number_npcs, selected_nation)
                 print(npc_group)
